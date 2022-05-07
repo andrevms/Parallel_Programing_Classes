@@ -1,3 +1,3 @@
 # Parallel_Programing_Classes
 
-This repository contains the programs that was developed during Parralle programing classes in University of Rio grande do Norte.
+This repository contains the programs developed during Parallel programming classes at the University of Rio Grande do Norte.
