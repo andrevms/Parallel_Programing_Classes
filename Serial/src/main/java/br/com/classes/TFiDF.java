@@ -17,6 +17,14 @@ public class TFiDF {
 	private Map<String, Map<String, Double>> documentsMap;
 	private Map<String, Double> documentsSizes;
 	
+	public static void main(String[] args) {
+		TFiDF test = new TFiDF();
+		test.loadDirectory("src/main/resources/arquivostxt");
+		test.calculateTFiDF();
+		test.save("src/main/resources/result");
+		System.out.println("Finish");
+	}
+	
 	public TFiDF(){
 		documentsMap = new HashMap<String, Map<String, Double>>();
 		documentsSizes = new HashMap<String, Double>();
@@ -103,7 +111,7 @@ public class TFiDF {
 	             
 	            bf.flush();
 	            
-	           // System.out.println("Save " + fileName +" Sucessfully");
+	           // System.out.println("Save " + fileName +" Successfully");
 	        }catch(IOException e){
 	            e.printStackTrace();
 	        }finally{
