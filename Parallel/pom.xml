@@ -1,0 +1,22 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  	<properties>
+    	<maven.compiler.source>13</maven.compiler.source>
+    	<maven.compiler.target>13</maven.compiler.target>
+  	</properties> 
+  	<modelVersion>4.0.0</modelVersion>
+  	<groupId>br.ufrn</groupId>
+  	<artifactId>TF-iDF-Parallel</artifactId>
+  	<version>0.0.1-SNAPSHOT</version>
+  	<dependencies>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-core</artifactId>
+			<version>1.35</version>
+		</dependency>
+		<dependency>
+			<groupId>org.openjdk.jmh</groupId>
+			<artifactId>jmh-generator-annprocess</artifactId>
+			<version>1.35</version>
+		</dependency>
+	</dependencies>
+</project>
