@@ -24,7 +24,7 @@ public class loadFileThread extends Thread{
 	private void loadDirectory(String directoryName) {
 		try {
 			Double docsize = 0.0;
-			System.out.println("Loading ... " + file.toString());
+			//System.out.println("Loading ... " + file.toString());
 				
 			//Loading words from file
 			Map<String, Double> doc = new HashMap<String, Double>(); 
@@ -39,7 +39,7 @@ public class loadFileThread extends Thread{
 				
 				addDocInMap(file.getFileName().toString(), doc, docsize);
 				
-				System.out.println("Success in loading " + file.toString());
+				//System.out.println("Success in loading " + file.toString());
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

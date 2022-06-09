@@ -20,7 +20,7 @@ public class TFiDFCalculator extends Thread{
 	
 	public void run() {
 		tfidf(file);
-		save(file);
+		//save(file);
 	}
 	
 	private void tfidf(String fileName) {
@@ -56,7 +56,7 @@ public class TFiDFCalculator extends Thread{
 	
 	private synchronized void save(String fileName) {
 		//System.out.println("Saving file " + fileName);
-		File file = new File("src/main/resources/result/" + fileName + ".txt");
+		File file = new File("src/main/resources/result/" + fileName);
         BufferedWriter bf = null;
         try{
         	

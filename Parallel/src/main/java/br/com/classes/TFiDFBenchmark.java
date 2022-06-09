@@ -22,34 +22,21 @@ import org.openjdk.jmh.infra.Blackhole;
 @Fork(1)
 public class TFiDFBenchmark {
 	
-	private TFiDF teste;
+	private TFiDFMutex teste;
 
 	@Setup
 	public void setup() {
-		teste = new TFiDF();
-		teste.loadDirectory("src/main/resources/arquivostxt");
+		teste = new TFiDFMutex();
+		teste.loadDirectorySerial("src/main/resources/arquivostxt");
 	}
 	
 	@Benchmark
 	public void calculateTFiDF(Blackhole bh) {
-		teste.calculateTFiDF();
-		bh.consume(teste);
+			teste.calculateTFiDF();
+			bh.consume(teste);
 	}
 	
-	/*
-	Benchmark
-	public void loadFiles(Blackhole bh) {
-		teste.loadDirectory("src/main/resources/arquivostxt");
-		bh.consume(teste);
-	}*/
-	
-	/*
-	Benchmark
-	public void saveFiles(Blackhole bh) {
-		teste.save("src/main/resources/result");
-		bh.consume(teste);
-	}
-	*/
+
 	
 	
 }

@@ -43,14 +43,11 @@ public class TFiDF {
 				
 				for(String word: allWordsInDoc) {
 					String formattedWord = word.replaceAll("[\\s.,(–)]", "").toLowerCase();
-					
 					doc.compute(formattedWord, (key,val) -> (val == null)? val=1.0 : val+1 );
 					docsize++;
 				}
-				
 				documentsMap.put(file.getFileName().toString(),doc);
 				documentsSizes.put(file.getFileName().toString(), docsize);
-				
 				//System.out.println("Success in loading " + file.toString());
 			}
 		} catch (IOException e) {
