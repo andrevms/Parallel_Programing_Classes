@@ -8,33 +8,36 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-public class TFiDFExecutor{
+public class TFiDFCallableAndFuture {
 
 	private volatile Map<String, Map<String, Double>> documentsMap;
 	private volatile Map<String, Double> documentsSizes;
 	
 	public static void main(String[] args) {
 		System.out.println("Init loading ...\n");
-		TFiDFExecutor t = new TFiDFExecutor();
+		TFiDFCallableAndFuture t = new TFiDFCallableAndFuture();
 		t.loadWithThread();
 		System.out.println(" loading concluded...\n");
 		System.out.println(" Init calculating TFiDF...\n");
 		t.calculateTFiDF();
 		System.out.println(" Calculating TFiDF concluded...");
-		t.save("src/main/resources/result");
 		System.out.println("Finish");
 	}
 	
-	public TFiDFExecutor(){
+	public TFiDFCallableAndFuture(){
 		this.documentsMap = new HashMap<String, Map<String, Double>>();
 		this.documentsSizes = new HashMap<String, Double>();
 	}
@@ -43,12 +46,23 @@ public class TFiDFExecutor{
 		try {
 			DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get("src/main/resources/arquivostxt"));
 			ExecutorService exec_service = Executors.newFixedThreadPool(4);
-			stream.forEach(path -> exec_service.execute(new Runnable() {
+
+			List<Callable<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>>> callables = new ArrayList<>(); 
+			stream.forEach(path -> callables.add(new Callable<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>>() {
 
 				@Override
-				public void run() {
-					loadFile(path); 
+				public SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>> call() throws Exception {
+					return new java.util.AbstractMap.
+							SimpleEntry<String,SimpleEntry<Double,Map<String, Double>>>
+							(path.getFileName().toString(), loadFile(path));
 				}}));
+			
+			List<Future<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>>> futures = exec_service.invokeAll(callables);
+			
+			for(Future<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>> future : futures) {
+				addDocInMap(future);
+				addDocsizeInMap(future);
+			}
 			
 			exec_service.shutdown();
 			exec_service.awaitTermination(60, TimeUnit.SECONDS);
@@ -62,17 +76,61 @@ public class TFiDFExecutor{
 		}
 	}
 
+	private synchronized void addDocsizeInMap(Future<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>> future) {
+		try {
+			//add fileName and docsize
+			documentsSizes.put(future.get().getKey(),future.get().getValue().getKey());
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private synchronized void addDocInMap(Future<SimpleEntry<String, SimpleEntry<Double, Map<String, Double>>>> future) {
+		try {
+			//add fileName and doc
+			documentsMap.put(future.get().getKey(), future.get().getValue().getValue());
+			//add fileName and docsize
+			documentsSizes.put(future.get().getKey(),future.get().getValue().getKey());
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public synchronized void addDocInMap(String fileName, Map<String, Double> doc, Double docsize) {
+		documentsMap.put(fileName,doc);
+		documentsSizes.put(fileName,docsize);
+	}
+
 	public void calculateTFiDF(){
 		
 			System.out.println("Calculating TFIDF");
 			documentsMap.forEach( (nameFile, fileMap) -> {
+				List<Callable<SimpleEntry<String,Double>>> callables = new ArrayList<>();
 				ExecutorService exec_service = Executors.newFixedThreadPool(4);
-				fileMap.forEach( (word, valor) -> exec_service.execute(new Runnable() {
+				fileMap.forEach( (word, valor) -> callables.add(new Callable<SimpleEntry<String,Double>>() {
 
 					@Override
-					public void run() {
-						tfidfSetResult(tfidf(nameFile, word),nameFile,word);
+					public SimpleEntry<String,Double> call() {
+						return new java.util.AbstractMap.SimpleEntry<String,Double>(word, tfidf(nameFile, word));
 					}}));
+				
+				try {
+					List<Future<SimpleEntry<String,Double>>> futures = exec_service.invokeAll(callables);
+					for(Future<SimpleEntry<String,Double>> future : futures) {
+						tfidfSetResult(future.get().getValue(), nameFile, future.get().getKey());
+					}
+				} catch (InterruptedException | ExecutionException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				
 				exec_service.shutdown();
 				try {
@@ -81,12 +139,12 @@ public class TFiDFExecutor{
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				
-				System.out.println("Finish TFIDF " + nameFile + "\n");
+				System.out.println("Finish TFIDF " + nameFile);
+				save(nameFile);
 			});
 	}
 	
-	private Double tfidf(String fileName, String word) {
+	public Double tfidf(String fileName, String word) {
 		// TODO Auto-generated method stub
 		return tf(fileName, word) * idf(fileName, word);
 	}
@@ -108,42 +166,34 @@ public class TFiDFExecutor{
 	private synchronized void tfidfSetResult(Double value, String fileName, String docWord) {
 		documentsMap.get(fileName).put(docWord, value);
 	}
-
-	private void loadFile(Path file) {
+			
+	private  SimpleEntry<Double, Map<String, Double>> loadFile(Path file) {
 		try {
 			Double docsize = 0.0;
 			System.out.println("Loading ... " + file.toString());
-				
 			//Loading words from file
 			Map<String, Double> doc = new HashMap<String, Double>(); 
 			final String[] allWordsInDoc = Files.readString(file).split(" ");
 				
 			for(String word: allWordsInDoc) {
 				final String formattedWord = word.replaceAll("[\\s.,(–)]", "").toLowerCase();
-					
 				doc.compute(formattedWord, (key,val) -> (val == null)? val=1.0 : val+1 );
 				docsize++;
-			}
-				
-				addDocInMap(file.getFileName().toString(), doc, docsize);
-				
-				System.out.println("Success in loading " + file.getFileName().toString());
-
+			}	
+			
+			System.out.println("Success in loading " + file.toString());
+			return new java.util.AbstractMap.SimpleEntry<Double, Map<String, Double>>(docsize, doc);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
+		return null;
 	}
 	
-	private synchronized void addDocInMap(String fileName, Map<String, Double> doc, Double docsize) {
-		documentsMap.put(fileName,doc);
-		documentsSizes.put(fileName,docsize);
-	}
-
-	private void saveFile(String fileName) {
+	private synchronized void save(String fileName) {
 		//System.out.println("Saving file " + fileName);
-		File file = new File("src/main/resources/result/" + fileName + ".txt");
+		File file = new File("src/main/resources/result/" + fileName);
         BufferedWriter bf = null;
         try{
         	
@@ -172,13 +222,5 @@ public class TFiDFExecutor{
                 bf.close();
             }catch(Exception e){}
         }
-}
-
-	public void save(String path) {
-	    //System.out.println("Saving files\n Beginning");
-	    for(Entry<String, Map<String, Double>> doc : documentsMap.entrySet()){
-	    	saveFile(doc.getKey());
-	    }
-	    //System.out.println("Finish");
 	}
 }
